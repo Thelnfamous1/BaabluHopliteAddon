@@ -1,0 +1,10 @@
+{
+  "item.baabluhopliteaddon.artemis_bow": "Artemis Bow",
+  "item.baabluhopliteaddon.artemis_bow.homing_arrow": "%s%% chance to launch homing arrows that seek out targets",
+  "item.baabluhopliteaddon.artemis_bow.lightning_arrow": "%s%% chance to launch a normal arrow that has a %s%% chance to strike lightning on the enemy that was hit",
+  "item.baabluhopliteaddon.pufferfish_cannon": "Pufferfish Cannon",
+  "item.baabluhopliteaddon.pufferfish_cannon.pufferfish": "Right-click to launch an explosive pufferfish that inflicts poison damage",
+  "item.baabluhopliteaddon.pufferfish_cannon.cooldown": "%s second cooldown",
+  "entity.baabluhopliteaddon.homing_arrow": "Homing Arrow",
+  "entity.baabluhopliteaddon.pufferfish": "Pufferfish"
+}

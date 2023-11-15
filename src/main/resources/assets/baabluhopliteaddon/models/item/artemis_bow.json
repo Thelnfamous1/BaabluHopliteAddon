@@ -1,0 +1,25 @@
+{
+  "parent": "baabluhopliteaddon:item/artemis_bow/default",
+  "overrides": [
+    {
+      "predicate": {
+        "pulling": 1
+      },
+      "model": "baabluhopliteaddon:item/artemis_bow/pulling/1"
+    },
+    {
+      "predicate": {
+        "pulling": 1,
+        "pull": 0.65
+      },
+      "model": "baabluhopliteaddon:item/artemis_bow/pulling/2"
+    },
+    {
+      "predicate": {
+        "pulling": 1,
+        "pull": 0.9
+      },
+      "model": "baabluhopliteaddon:item/artemis_bow/pulling/3"
+    }
+  ]
+}

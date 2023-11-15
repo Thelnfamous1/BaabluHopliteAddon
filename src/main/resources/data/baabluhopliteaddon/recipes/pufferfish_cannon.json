@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "I": {
+      "item": "minecraft:feather"
+    },
+    "P": {
+      "item": "minecraft:spyglass"
+    },
+    "T": {
+      "item": "minecraft:tnt"
+    }
+  },
+  "pattern": [
+    " P ",
+    "IPI",
+    "ITI"
+  ],
+  "result": {
+    "item": "baabluhopliteaddon:pufferfish_cannon"
+  }
+}
