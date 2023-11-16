@@ -44,6 +44,7 @@ public class PufferfishCannon extends ProjectileWeaponItem {
                 if (!((double)powerForTime < 0.1D)) {
                     if (!pLevel.isClientSide) {
                         ThrownPufferfish pufferfish = new ThrownPufferfish(pLevel, player);
+                        pufferfish.setExplosionPower(2);
                         if(!projectile.isEmpty()){
                             ItemStack copy = projectile.copy();
                             copy.setCount(1);

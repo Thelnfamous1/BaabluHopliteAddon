@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -75,7 +76,7 @@ public class BaabluHopliteAddon {
 
     private void onGetProjectile(LivingGetProjectileEvent event){
         if(event.getProjectileWeaponItemStack().getItem() instanceof PufferfishCannon){
-            if(!event.getProjectileWeaponItemStack().is(Items.PUFFERFISH)){
+            if(!event.getProjectileWeaponItemStack().is(Items.PUFFERFISH) && event.getEntity() instanceof Player player && player.getAbilities().instabuild){
                 event.setProjectileItemStack(new ItemStack(Items.PUFFERFISH));
             }
         }
