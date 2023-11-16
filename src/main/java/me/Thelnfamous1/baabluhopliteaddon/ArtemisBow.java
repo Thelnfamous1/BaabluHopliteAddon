@@ -7,10 +7,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.DecimalFormat;
@@ -38,10 +43,11 @@ public class ArtemisBow extends BowItem {
         AbstractArrow custom = super.customArrow(arrow);
         boolean homing = arrow.level.random.nextFloat() < HOMING_ARROW_CHANCE;
         if(homing){
-            Entity shooter = custom.getOwner();
-            if(shooter instanceof LivingEntity living){
-                custom = new HomingArrow(living.level, living);
-                ((HomingArrow)custom).setEffectsFromItem(living.getUseItem());
+            Entity owner = custom.getOwner();
+            if(owner instanceof LivingEntity shooter){
+                custom = new HomingArrow(shooter.level, shooter);
+                ((HomingArrow)custom).setEffectsFromItem(shooter.getUseItem());
+                this.lockOn(shooter, (HomingArrow) custom);
             }
         } else{
             boolean lightning = custom.level.random.nextFloat() < LIGHTNING_ARROW_CHANCE;
@@ -51,6 +57,29 @@ public class ArtemisBow extends BowItem {
         }
 
         return custom;
+    }
+
+    private void lockOn(LivingEntity shooter, HomingArrow homingArrow) {
+        double maxLockOnDist = this.getMaxLockOnDist();
+        HitResult hitResult = shooter.pick(maxLockOnDist, 0.0F, false);
+        Vec3 eyePosition = shooter.getEyePosition(0.0F);
+        double effectiveMaxLockOnDist = maxLockOnDist;
+
+        if (hitResult.getType() != HitResult.Type.MISS) {
+            effectiveMaxLockOnDist = hitResult.getLocation().distanceToSqr(eyePosition);
+        }
+
+        Vec3 startVec = shooter.getViewVector(1.0F);
+        Vec3 endVec = eyePosition.add(startVec.x * maxLockOnDist, startVec.y * maxLockOnDist, startVec.z * maxLockOnDist);
+        AABB searchBox = shooter.getBoundingBox().expandTowards(startVec.scale(maxLockOnDist)).inflate(1.0D, 1.0D, 1.0D);
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(shooter, eyePosition, endVec, searchBox, (e) -> !e.isSpectator() && e.isPickable(), effectiveMaxLockOnDist);
+        if(entityHitResult != null){
+            homingArrow.setHomingTarget(entityHitResult.getEntity());
+        }
+    }
+
+    private double getMaxLockOnDist() {
+        return 64;
     }
 
     @Override
