@@ -14,13 +14,11 @@ import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.*;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.entity.ProjectileImpactEvent;
 import net.minecraftforge.event.entity.living.LivingGetProjectileEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -43,12 +41,10 @@ public class BaabluHopliteAddon {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
 
     public static final RegistryObject<Item> ARTEMIS_BOW = ITEMS.register("artemis_bow", () -> new ArtemisBow(new Item.Properties()
-            .durability(384)
-            .tab(CreativeModeTab.TAB_COMBAT)));
+            .durability(384)));
 
     public static final RegistryObject<Item> PUFFERFISH_CANNON = ITEMS.register("pufferfish_cannon", () -> new PufferfishCannon(new Item.Properties()
-            .durability(465)
-            .tab(CreativeModeTab.TAB_COMBAT)));
+            .durability(465)));
 
     private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
 
@@ -74,6 +70,14 @@ public class BaabluHopliteAddon {
         MinecraftForge.EVENT_BUS.addListener(this::onProjectileImpact);
     }
 
+    @SubscribeEvent
+    static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event){
+        if(event.getTabKey().equals(CreativeModeTabs.COMBAT)){
+            event.accept(ARTEMIS_BOW);
+            event.accept(PUFFERFISH_CANNON);
+        }
+    }
+
     private void onGetProjectile(LivingGetProjectileEvent event){
         if(event.getProjectileWeaponItemStack().getItem() instanceof PufferfishCannon){
             if(!event.getProjectileWeaponItemStack().is(Items.PUFFERFISH) && event.getEntity() instanceof Player player && player.getAbilities().instabuild){
@@ -83,17 +87,17 @@ public class BaabluHopliteAddon {
     }
 
     private void onProjectileImpact(ProjectileImpactEvent event){
-        if(!event.getProjectile().level.isClientSide && event.getProjectile() instanceof AbstractArrow arrow){
+        if(!event.getProjectile().level().isClientSide && event.getProjectile() instanceof AbstractArrow arrow){
             if(arrow.getTags().contains(ArtemisBow.LIGHTNING_ARROW_TAG)){
                 HitResult hitResult = event.getRayTraceResult();
                 if(hitResult.getType() == HitResult.Type.MISS) return;
-                LightningBolt lightningBolt = EntityType.LIGHTNING_BOLT.create(event.getProjectile().level);
+                LightningBolt lightningBolt = EntityType.LIGHTNING_BOLT.create(event.getProjectile().level());
                 if(lightningBolt == null) return;
                 lightningBolt.moveTo(hitResult.getLocation());
                 Entity entity = event.getProjectile().getOwner();
                 lightningBolt.setCause(entity instanceof ServerPlayer ? (ServerPlayer)entity : null);
-                event.getProjectile().level.addFreshEntity(lightningBolt);
-                event.getProjectile().level.playSound(null, new BlockPos(hitResult.getLocation()), SoundEvents.TRIDENT_THUNDER, SoundSource.WEATHER, 5.0F, 1.0F);
+                event.getProjectile().level().addFreshEntity(lightningBolt);
+                event.getProjectile().level().playSound(null, BlockPos.containing(hitResult.getLocation()), SoundEvents.TRIDENT_THUNDER, SoundSource.WEATHER, 5.0F, 1.0F);
             }
         }
     }

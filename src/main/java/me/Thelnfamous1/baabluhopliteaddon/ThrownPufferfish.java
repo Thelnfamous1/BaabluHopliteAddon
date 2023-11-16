@@ -4,7 +4,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -13,11 +12,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -104,9 +101,10 @@ public class ThrownPufferfish extends ThrowableItemProjectile{
    @Override
    protected void onHit(HitResult pResult) {
       super.onHit(pResult);
-      if (!this.level.isClientSide) {
-         boolean grief = ForgeEventFactory.getMobGriefingEvent(this.level, this.getOwner());
-         this.level.explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionPower, grief, grief ? Explosion.BlockInteraction.DESTROY : Explosion.BlockInteraction.NONE);
+      if (!this.level().isClientSide) {
+         // TODO 1.19.3: The creation of Level.ExplosionInteraction means this code path will fire EntityMobGriefingEvent twice. Should we try and fix it? -SS
+         boolean flag = net.minecraftforge.event.ForgeEventFactory.getMobGriefingEvent(this.level(), this.getOwner());
+         this.level().explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionPower, flag, Level.ExplosionInteraction.MOB);
          this.discard();
       }
    }
@@ -114,10 +112,10 @@ public class ThrownPufferfish extends ThrowableItemProjectile{
    @Override
    protected void onHitEntity(EntityHitResult pResult) {
       super.onHitEntity(pResult);
-      if (!this.level.isClientSide) {
+      if (!this.level().isClientSide) {
          Entity hitEntity = pResult.getEntity();
          Entity owner = this.getOwner();
-         hitEntity.hurt(DamageSource.thrown(this, this.getOwner()), 6.0F);
+         hitEntity.hurt(this.damageSources().thrown(this, this.getOwner()), 6.0F);
          if (owner instanceof LivingEntity livingOwner) {
             this.doEnchantDamageEffects(livingOwner, hitEntity);
          }

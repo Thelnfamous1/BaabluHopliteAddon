@@ -41,16 +41,16 @@ public class ArtemisBow extends BowItem {
         75% chance to launch a normal arrow that has a 25% chance to strike lightning on the enemy that was hit
          */
         AbstractArrow custom = super.customArrow(arrow);
-        boolean homing = arrow.level.random.nextFloat() < HOMING_ARROW_CHANCE;
+        boolean homing = arrow.level().random.nextFloat() < HOMING_ARROW_CHANCE;
         if(homing){
             Entity owner = custom.getOwner();
             if(owner instanceof LivingEntity shooter){
-                custom = new HomingArrow(shooter.level, shooter);
+                custom = new HomingArrow(shooter.level(), shooter);
                 ((HomingArrow)custom).setEffectsFromItem(shooter.getUseItem());
                 this.lockOn(shooter, (HomingArrow) custom);
             }
         } else{
-            boolean lightning = custom.level.random.nextFloat() < LIGHTNING_ARROW_CHANCE;
+            boolean lightning = custom.level().random.nextFloat() < LIGHTNING_ARROW_CHANCE;
             if(lightning){
                 custom.addTag(LIGHTNING_ARROW_TAG);
             }

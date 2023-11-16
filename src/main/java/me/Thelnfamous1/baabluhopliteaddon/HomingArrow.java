@@ -51,7 +51,7 @@ public class HomingArrow extends Arrow {
                 //this.setNoPhysics(true);
                 Vec3 positionDelta = homingTarget.getEyePosition().subtract(this.position());
                 this.setPosRaw(this.getX(), this.getY() + positionDelta.y * 0.015 * (double)loyaltyLevel, this.getZ());
-                if (this.level.isClientSide) {
+                if (this.level().isClientSide) {
                     this.yOld = this.getY();
                 }
 
@@ -66,13 +66,13 @@ public class HomingArrow extends Arrow {
 
     public void setHomingTarget(Entity entity) {
         this.entityData.set(DATA_HOMING_TARGET_ID, OptionalInt.of(entity.getId()));
-        BaabluHopliteAddon.LOGGER.info("Set homing target for {} to {}", this, entity);
+        //BaabluHopliteAddon.LOGGER.info("Set homing target for {} to {}", this, entity);
     }
 
     @Nullable
     public Entity getHomingTarget(){
         if (this.attachedToEntity == null) {
-            this.entityData.get(DATA_HOMING_TARGET_ID).ifPresent((id) -> this.attachedToEntity = this.level.getEntity(id));
+            this.entityData.get(DATA_HOMING_TARGET_ID).ifPresent((id) -> this.attachedToEntity = this.level().getEntity(id));
         }
         return this.attachedToEntity;
     }
