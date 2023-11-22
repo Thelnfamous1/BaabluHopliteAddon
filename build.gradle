@@ -149,6 +149,16 @@ minecraft {
     }
 }
 
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+
+    // Sets up the mixin config; this gets added to run configurations and the manifest in the final jar
+    config "${mod_id}.mixins.json"
+
+    // Enables exporting mixin-changed classes to .mixin.out in the run folder
+    debug.export = true
+}
+
 configurations {
     datagenCompileClasspath.extendsFrom compileClasspath
     datagenRuntimeClasspath.extendsFrom runtimeClasspath
@@ -189,6 +199,9 @@ dependencies {
 
     datagenImplementation sourceSets.main.output
 
+    // Mixin annotation processor - generates the refmap
+    annotationProcessor "org.spongepowered:mixin:${mixin_version}:processor"
+
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
@@ -219,7 +232,7 @@ tasks.withType(ProcessResources).configureEach {
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta', "${mod_id}.mixins.json".toString()]) {
         expand replaceProperties + [project: project]
     }
 }

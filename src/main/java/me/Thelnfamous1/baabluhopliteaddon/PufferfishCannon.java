@@ -11,14 +11,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.event.ForgeEventFactory;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.function.Predicate;
 
-public class PufferfishCannon extends ProjectileWeaponItem {
-    public static final Predicate<ItemStack> PUFFERFISH_ONLY = (stack) -> stack.is(Items.PUFFERFISH);
+public class PufferfishCannon extends Item implements Vanishable {
     public static final int COOLDOWN_IN_SECONDS = 10;
 
     public PufferfishCannon(Properties pProperties) {
@@ -28,45 +25,25 @@ public class PufferfishCannon extends ProjectileWeaponItem {
     @Override
     public void releaseUsing(ItemStack pStack, Level pLevel, LivingEntity pEntityLiving, int pTimeLeft) {
         if (pEntityLiving instanceof Player player) {
-            boolean infinite = player.getAbilities().instabuild;
-            ItemStack projectile = player.getProjectile(pStack);
 
             int chargeTime = this.getUseDuration(pStack) - pTimeLeft;
-            chargeTime = ForgeEventFactory.onArrowLoose(pStack, pLevel, player, chargeTime, !projectile.isEmpty() || infinite);
             if (chargeTime < 0) return;
 
-            if (!projectile.isEmpty() || infinite) {
-                if (projectile.isEmpty()) {
-                    projectile = new ItemStack(Items.PUFFERFISH);
+            float powerForTime = getPowerForTime(chargeTime);
+            if (!((double)powerForTime < 0.1D)) {
+                if (!pLevel.isClientSide) {
+                    ThrownPufferfish pufferfish = new ThrownPufferfish(pLevel, player);
+                    pufferfish.setExplosionPower(2);
+                    pufferfish.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, powerForTime * 3.0F, 1.0F);
+
+                    pStack.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(player.getUsedItemHand()));
+                    pLevel.addFreshEntity(pufferfish);
+                    player.getCooldowns().addCooldown(pStack.getItem(), this.getCooldownTicks());
                 }
 
-                float powerForTime = getPowerForTime(chargeTime);
-                if (!((double)powerForTime < 0.1D)) {
-                    if (!pLevel.isClientSide) {
-                        ThrownPufferfish pufferfish = new ThrownPufferfish(pLevel, player);
-                        pufferfish.setExplosionPower(2);
-                        if(!projectile.isEmpty()){
-                            ItemStack copy = projectile.copy();
-                            copy.setCount(1);
-                            pufferfish.setItem(copy);
-                        }
-                        pufferfish.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, powerForTime * 3.0F, 1.0F);
+                pLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F / (pLevel.getRandom().nextFloat() * 0.4F + 1.2F) + powerForTime * 0.5F);
 
-                        pStack.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(player.getUsedItemHand()));
-                        pLevel.addFreshEntity(pufferfish);
-                        player.getCooldowns().addCooldown(pStack.getItem(), this.getCooldownTicks());
-                    }
-
-                    pLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F / (pLevel.getRandom().nextFloat() * 0.4F + 1.2F) + powerForTime * 0.5F);
-                    if (!infinite) {
-                        projectile.shrink(1);
-                        if (projectile.isEmpty()) {
-                            player.getInventory().removeItem(projectile);
-                        }
-                    }
-
-                    player.awardStat(Stats.ITEM_USED.get(this));
-                }
+                player.awardStat(Stats.ITEM_USED.get(this));
             }
         }
     }
@@ -94,32 +71,12 @@ public class PufferfishCannon extends ProjectileWeaponItem {
     @Override
     public InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, InteractionHand pHand) {
         ItemStack itemInHand = pPlayer.getItemInHand(pHand);
-        boolean hasProjectile = !pPlayer.getProjectile(itemInHand).isEmpty();
-
-        InteractionResultHolder<ItemStack> nockEventResult = ForgeEventFactory.onArrowNock(itemInHand, pLevel, pPlayer, pHand, hasProjectile);
-        if (nockEventResult != null) return nockEventResult;
-
-        if (!pPlayer.getAbilities().instabuild && !hasProjectile) {
-            return InteractionResultHolder.fail(itemInHand);
-        } else {
-            pPlayer.startUsingItem(pHand);
-            return InteractionResultHolder.consume(itemInHand);
-        }
+        pPlayer.startUsingItem(pHand);
+        return InteractionResultHolder.consume(itemInHand);
     }
 
     protected int getCooldownTicks(){
         return COOLDOWN_IN_SECONDS * 20;
-    }
-
-
-    @Override
-    public Predicate<ItemStack> getAllSupportedProjectiles() {
-        return PUFFERFISH_ONLY;
-    }
-
-    @Override
-    public int getDefaultProjectileRange() {
-        return BowItem.DEFAULT_RANGE;
     }
 
     @Override

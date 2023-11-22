@@ -2,6 +2,7 @@ package me.Thelnfamous1.baabluhopliteaddon;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -22,6 +23,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 
 public class ArtemisBow extends BowItem {
 
@@ -29,9 +31,21 @@ public class ArtemisBow extends BowItem {
     public static final float HOMING_ARROW_CHANCE = 0.25F;
     public static final float LIGHTNING_ARROW_CHANCE = 0.25F;
     public static final DecimalFormat DECIMAL_FORMAT = Util.make(new DecimalFormat("#.##"), (decimalFormat) -> decimalFormat.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.ROOT)));
+    public static final String HOMING_CHANCE_TAG = "HomingChance";
+    public static final String LIGHTNING_CHANCE_TAG = "LightningChance";
 
     public ArtemisBow(Properties pProperties) {
         super(pProperties);
+    }
+
+    public static float getHomingArrowChance(ItemStack bowStack) {
+        CompoundTag tag = bowStack.getTag();
+        return tag == null || !tag.contains(HOMING_CHANCE_TAG)? HOMING_ARROW_CHANCE : tag.getFloat(HOMING_CHANCE_TAG);
+    }
+
+    public static float getLightningArrowChance(ItemStack bowStack) {
+        CompoundTag tag = bowStack.getTag();
+        return tag == null || !tag.contains(LIGHTNING_CHANCE_TAG) ? LIGHTNING_ARROW_CHANCE : tag.getFloat(LIGHTNING_CHANCE_TAG);
     }
 
     @Override
@@ -41,17 +55,13 @@ public class ArtemisBow extends BowItem {
         75% chance to launch a normal arrow that has a 25% chance to strike lightning on the enemy that was hit
          */
         AbstractArrow custom = super.customArrow(arrow);
-        boolean homing = arrow.level().random.nextFloat() < HOMING_ARROW_CHANCE;
-        if(homing){
-            Entity owner = custom.getOwner();
-            if(owner instanceof LivingEntity shooter){
+        if(custom.getOwner() instanceof LivingEntity shooter){
+            ItemStack bowStack = shooter.getUseItem();
+            if(custom.level().random.nextFloat() < getHomingArrowChance(bowStack)){
                 custom = new HomingArrow(shooter.level(), shooter);
-                ((HomingArrow)custom).setEffectsFromItem(shooter.getUseItem());
+                ((HomingArrow)custom).setEffectsFromItem(bowStack);
                 this.lockOn(shooter, (HomingArrow) custom);
-            }
-        } else{
-            boolean lightning = custom.level().random.nextFloat() < LIGHTNING_ARROW_CHANCE;
-            if(lightning){
+            } else if(custom.level().random.nextFloat() < getLightningArrowChance(bowStack)){
                 custom.addTag(LIGHTNING_ARROW_TAG);
             }
         }
@@ -62,17 +72,16 @@ public class ArtemisBow extends BowItem {
     private void lockOn(LivingEntity shooter, HomingArrow homingArrow) {
         double maxLockOnDist = this.getMaxLockOnDist();
         HitResult hitResult = shooter.pick(maxLockOnDist, 0.0F, false);
-        Vec3 eyePosition = shooter.getEyePosition(0.0F);
-        double effectiveMaxLockOnDist = maxLockOnDist;
-
+        Vec3 startVec = shooter.getEyePosition();
+        double maxLockOnDistSqr = maxLockOnDist * maxLockOnDist;
         if (hitResult.getType() != HitResult.Type.MISS) {
-            effectiveMaxLockOnDist = hitResult.getLocation().distanceToSqr(eyePosition);
+            maxLockOnDistSqr = hitResult.getLocation().distanceToSqr(startVec);
         }
-
-        Vec3 startVec = shooter.getViewVector(1.0F);
-        Vec3 endVec = eyePosition.add(startVec.x * maxLockOnDist, startVec.y * maxLockOnDist, startVec.z * maxLockOnDist);
-        AABB searchBox = shooter.getBoundingBox().expandTowards(startVec.scale(maxLockOnDist)).inflate(1.0D, 1.0D, 1.0D);
-        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(shooter, eyePosition, endVec, searchBox, (e) -> !e.isSpectator() && e.isPickable(), effectiveMaxLockOnDist);
+        Vec3 viewVector = shooter.getViewVector(1.0F).scale(maxLockOnDist);
+        Vec3 endVec = startVec.add(viewVector);
+        AABB searchBox = shooter.getBoundingBox().expandTowards(viewVector).inflate(1.0D);
+        Predicate<Entity> filter = (e) -> !e.isSpectator() && e.isPickable();
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(shooter, startVec, endVec, searchBox, filter, maxLockOnDistSqr);
         if(entityHitResult != null){
             homingArrow.setHomingTarget(entityHitResult.getEntity());
         }
@@ -85,7 +94,10 @@ public class ArtemisBow extends BowItem {
     @Override
     public void appendHoverText(ItemStack pStack, @Nullable Level pLevel, List<Component> pTooltipComponents, TooltipFlag pIsAdvanced) {
         super.appendHoverText(pStack, pLevel, pTooltipComponents, pIsAdvanced);
-        pTooltipComponents.add(Component.translatable("item.baabluhopliteaddon.artemis_bow.homing_arrow", DECIMAL_FORMAT.format(HOMING_ARROW_CHANCE * 100.0D)).withStyle(ChatFormatting.GRAY));
-        pTooltipComponents.add(Component.translatable("item.baabluhopliteaddon.artemis_bow.lightning_arrow",  DECIMAL_FORMAT.format(100.0D - (HOMING_ARROW_CHANCE * 100.0D)), DECIMAL_FORMAT.format(LIGHTNING_ARROW_CHANCE * 100.0D)).withStyle(ChatFormatting.GRAY));
+        double homingArrowChance = getHomingArrowChance(pStack) * 100.0D;
+        pTooltipComponents.add(Component.translatable("item.baabluhopliteaddon.artemis_bow.homing_arrow", DECIMAL_FORMAT.format(homingArrowChance)).withStyle(ChatFormatting.GRAY));
+        double regularArrowChance = 100.0D - homingArrowChance;
+        double lightningArrowChance = getLightningArrowChance(pStack) * 100.0D;
+        pTooltipComponents.add(Component.translatable("item.baabluhopliteaddon.artemis_bow.lightning_arrow",  DECIMAL_FORMAT.format(regularArrowChance), DECIMAL_FORMAT.format(lightningArrowChance)).withStyle(ChatFormatting.GRAY));
     }
 }
