@@ -88,7 +88,7 @@ public class ArtemisBow extends BowItem {
     }
 
     private double getMaxLockOnDist() {
-        return 64;
+        return 512;
     }
 
     @Override

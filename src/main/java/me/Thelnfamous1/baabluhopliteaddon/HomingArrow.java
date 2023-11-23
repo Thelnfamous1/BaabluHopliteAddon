@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
@@ -20,6 +21,7 @@ import java.util.OptionalInt;
 public class HomingArrow extends Arrow implements PhysicsCheck{
     private static final EntityDataAccessor<OptionalInt> DATA_HOMING_TARGET_ID = SynchedEntityData.defineId(HomingArrow.class, EntityDataSerializers.OPTIONAL_UNSIGNED_INT);
     private static final EntityDataAccessor<Float> DATA_SHOT_VELOCITY = SynchedEntityData.defineId(HomingArrow.class, EntityDataSerializers.FLOAT);
+    private static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forCombat().range(1024.0D);
     private Entity homingTarget;
 
     public HomingArrow(EntityType<? extends HomingArrow> pEntityType, Level pLevel) {
@@ -70,9 +72,19 @@ public class HomingArrow extends Arrow implements PhysicsCheck{
                 double zNew = this.getZ() + deltaMovement.z;
                 this.level().addParticle(ParticleTypes.PORTAL, xNew - deltaMovement.x * 0.25D + this.random.nextDouble() * 0.6D - 0.3D, yNew - deltaMovement.y * 0.25D - 0.5D, zNew - deltaMovement.z * 0.25D + this.random.nextDouble() * 0.6D - 0.3D, deltaMovement.x, deltaMovement.y, deltaMovement.z);
             }
+        } else if(!this.level().isClientSide){
+            LivingEntity target = this.level().getNearestEntity(LivingEntity.class, TARGETING_CONDITIONS, this.getShooter(), this.getX(), this.getY(), this.getZ(), this.getBoundingBox().inflate(16.0D));
+            if(target != null) this.setHomingTarget(target);
         }
 
         super.tick();
+    }
+
+    @Nullable
+    private LivingEntity getShooter(){
+        Entity owner = this.getOwner();
+        if(owner instanceof LivingEntity shooter) return shooter;
+        return null;
     }
 
     @Override
