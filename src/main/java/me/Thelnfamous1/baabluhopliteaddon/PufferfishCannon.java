@@ -1,6 +1,7 @@
 package me.Thelnfamous1.baabluhopliteaddon;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -11,9 +12,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public class PufferfishCannon extends Item implements Vanishable {
     public static final int COOLDOWN_IN_SECONDS = 10;
@@ -23,55 +26,37 @@ public class PufferfishCannon extends Item implements Vanishable {
     }
 
     @Override
-    public void releaseUsing(ItemStack pStack, Level pLevel, LivingEntity pEntityLiving, int pTimeLeft) {
-        if (pEntityLiving instanceof Player player) {
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
 
-            int chargeTime = this.getUseDuration(pStack) - pTimeLeft;
-            if (chargeTime < 0) return;
-
-            float powerForTime = getPowerForTime(chargeTime);
-            if (!((double)powerForTime < 0.1D)) {
-                if (!pLevel.isClientSide) {
-                    ThrownPufferfish pufferfish = new ThrownPufferfish(pLevel, player);
-                    pufferfish.setExplosionPower(2);
-                    pufferfish.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, powerForTime * 3.0F, 1.0F);
-
-                    pStack.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(player.getUsedItemHand()));
-                    pLevel.addFreshEntity(pufferfish);
-                    player.getCooldowns().addCooldown(pStack.getItem(), this.getCooldownTicks());
-                }
-
-                pLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F / (pLevel.getRandom().nextFloat() * 0.4F + 1.2F) + powerForTime * 0.5F);
-
-                player.awardStat(Stats.ITEM_USED.get(this));
+            @Override
+            public HumanoidModel.@Nullable ArmPose getArmPose(LivingEntity entityLiving, InteractionHand hand, ItemStack itemStack) {
+                return !entityLiving.swinging ? HumanoidModel.ArmPose.CROSSBOW_HOLD : null;
             }
-        }
-    }
-
-    public static float getPowerForTime(int pCharge) {
-        float power = (float)pCharge / 20.0F;
-        power = (power * power + power * 2.0F) / 3.0F;
-        if (power > 1.0F) {
-            power = 1.0F;
-        }
-
-        return power;
-    }
-
-    @Override
-    public int getUseDuration(ItemStack pStack) {
-        return 72000;
+        });
     }
 
     @Override
     public UseAnim getUseAnimation(ItemStack pStack) {
-        return UseAnim.BOW;
+        return UseAnim.CROSSBOW;
     }
 
     @Override
     public InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, InteractionHand pHand) {
         ItemStack itemInHand = pPlayer.getItemInHand(pHand);
-        pPlayer.startUsingItem(pHand);
+        if (!pLevel.isClientSide) {
+            ThrownPufferfish pufferfish = new ThrownPufferfish(pLevel, pPlayer);
+            pufferfish.setExplosionPower(2);
+            pufferfish.shootFromRotation(pPlayer, pPlayer.getXRot(), pPlayer.getYRot(), 0.0F, 3.0F, 1.0F);
+
+            itemInHand.hurtAndBreak(1, pPlayer, (p) -> p.broadcastBreakEvent(pPlayer.getUsedItemHand()));
+            pLevel.addFreshEntity(pufferfish);
+            pPlayer.getCooldowns().addCooldown(itemInHand.getItem(), this.getCooldownTicks());
+        }
+
+        pLevel.playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), SoundEvents.FIREWORK_ROCKET_SHOOT, SoundSource.PLAYERS, 1.0F, 1.0F / (pLevel.getRandom().nextFloat() * 0.4F + 1.2F) + 0.5F);
+
+        pPlayer.awardStat(Stats.ITEM_USED.get(this));
         return InteractionResultHolder.consume(itemInHand);
     }
 
